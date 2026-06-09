@@ -1,49 +1,82 @@
-export const CONTACT_PREFERENCES = ["phone", "video", "in-person"] as const;
-export type ContactPreference = (typeof CONTACT_PREFERENCES)[number];
+export const STAFF_ROLES = ["care_coordinator", "front_desk", "practice_manager", "billing_admin"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
 
-export const ROUTE_ACUITIES = [
-  "emergency_prompt",
-  "same_day_gp",
-  "routine_gp",
-  "admin_review"
+export const TASK_TYPES = [
+  "appointment_reschedule",
+  "referral_admin_follow_up",
+  "insurance_admin_check",
+  "document_request",
+  "message_callback"
 ] as const;
-export type RouteAcuity = (typeof ROUTE_ACUITIES)[number];
+export type TaskType = (typeof TASK_TYPES)[number];
 
-export interface PatientProfile {
-  displayName: string;
-  ageYears: number;
-  pronouns?: string;
-  region?: string;
-}
+export const TASK_STATUSES = ["queued", "assigned", "waiting_approval", "approved", "completed"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
 
-export interface VitalsSnapshot {
-  temperatureC?: number;
-  heartRateBpm?: number;
-  systolicBp?: number;
-  oxygenSaturationPct?: number;
-}
+export const CONNECTOR_TYPES = ["mock_ehr_admin", "mock_sms", "mock_email"] as const;
+export type ConnectorType = (typeof CONNECTOR_TYPES)[number];
 
-export interface SyntheticIntake {
+export interface SyntheticStaffMember {
   id: string;
-  patient: PatientProfile;
-  concerns: string[];
-  symptoms: string[];
-  durationDays: number;
-  severity: number;
-  riskFactors: string[];
-  redFlags: string[];
-  medications: string[];
-  allergies: string[];
-  contactPreference: ContactPreference;
-  vitals?: VitalsSnapshot;
-  notes?: string;
+  displayName: string;
+  role: StaffRole;
+  maxOpenTasks: number;
 }
 
-export interface RouteResult {
-  intakeId: string;
-  acuity: RouteAcuity;
-  label: string;
-  rationale: string[];
-  suggestedPreparation: string[];
+export interface SyntheticClinicSlot {
+  id: string;
+  startsAt: string;
+  durationMinutes: number;
+  staffRole: StaffRole;
+  available: boolean;
+}
+
+export interface SyntheticAdminTask {
+  id: string;
+  clinicId: string;
+  title: string;
+  type: TaskType;
+  status: TaskStatus;
+  requestedBy: string;
+  requiredRole: StaffRole;
+  dueAt: string;
+  relatedSlotId?: string;
+  needsApproval: boolean;
+  assignedTo?: string;
+  adminNotes: string[];
+}
+
+export interface SyntheticClinicData {
+  clinicId: string;
+  clinicName: string;
+  staff: SyntheticStaffMember[];
+  slots: SyntheticClinicSlot[];
+  tasks: SyntheticAdminTask[];
+}
+
+export interface AuditEvent {
+  id: string;
+  at: string;
+  actor: string;
+  action: string;
+  taskId: string;
+  detail: string;
+}
+
+export interface AdminConnectorPayload {
+  connector: ConnectorType;
+  operation: string;
+  dryRun: true;
+  externalReference: string;
+  payload: Record<string, string | number | boolean | null>;
+}
+
+export interface OperationsRunResult {
+  clinicId: string;
+  generatedAt: string;
+  taskUpdates: SyntheticAdminTask[];
+  approvals: SyntheticAdminTask[];
+  auditLog: AuditEvent[];
+  connectorPayloads: AdminConnectorPayload[];
   disclaimer: string;
 }

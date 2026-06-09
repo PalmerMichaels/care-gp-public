@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Clean-room, non-regulated TypeScript demo of a public GP intake routing workflow using synthetic data.",
+  "description": "Clean-room, non-clinical TypeScript demo of synthetic primary healthcare operations admin workflows.",
   "bin": {
     "care-gp-public": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "start": "node dist/cli.js demo",
     "validate": "npm run build && node dist/cli.js validate",
     "test": "npm run build && node --test dist/*.test.js"

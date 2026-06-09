@@ -1,97 +1,107 @@
-import type { SyntheticIntake } from "./types.js";
+import type { SyntheticClinicData } from "./types.js";
 
-export const syntheticIntakes: SyntheticIntake[] = [
-  {
-    id: "SYN-001",
-    patient: {
-      displayName: "Alex Morgan",
-      ageYears: 34,
-      pronouns: "they/them",
-      region: "Synthetic North"
+export const syntheticClinic: SyntheticClinicData = {
+  clinicId: "CLINIC-SYN-001",
+  clinicName: "Synthetic Riverside Primary Care Operations",
+  staff: [
+    {
+      id: "STAFF-001",
+      displayName: "Riley Admin",
+      role: "front_desk",
+      maxOpenTasks: 4
     },
-    concerns: ["ongoing cough", "fatigue"],
-    symptoms: ["dry cough", "sleep disruption", "low energy"],
-    durationDays: 9,
-    severity: 4,
-    riskFactors: [],
-    redFlags: [],
-    medications: ["synthetic salbutamol inhaler"],
-    allergies: ["none recorded"],
-    contactPreference: "phone",
-    vitals: {
-      temperatureC: 37.4,
-      heartRateBpm: 82,
-      systolicBp: 118,
-      oxygenSaturationPct: 98
+    {
+      id: "STAFF-002",
+      displayName: "Jordan Coordinator",
+      role: "care_coordinator",
+      maxOpenTasks: 3
     },
-    notes: "Synthetic case for routine visit preparation. Not based on a real patient."
-  },
-  {
-    id: "SYN-002",
-    patient: {
-      displayName: "Priya Shah",
-      ageYears: 67,
-      pronouns: "she/her",
-      region: "Synthetic Midlands"
+    {
+      id: "STAFF-003",
+      displayName: "Morgan Manager",
+      role: "practice_manager",
+      maxOpenTasks: 2
     },
-    concerns: ["urinary discomfort", "feverish overnight"],
-    symptoms: ["burning when urinating", "new confusion reported by carer", "chills"],
-    durationDays: 2,
-    severity: 8,
-    riskFactors: ["older adult", "synthetic diabetes history"],
-    redFlags: [],
-    medications: ["synthetic metformin"],
-    allergies: ["synthetic penicillin allergy"],
-    contactPreference: "phone",
-    vitals: {
-      temperatureC: 38.8,
-      heartRateBpm: 104,
-      systolicBp: 106,
-      oxygenSaturationPct: 96
+    {
+      id: "STAFF-004",
+      displayName: "Taylor Billing",
+      role: "billing_admin",
+      maxOpenTasks: 3
+    }
+  ],
+  slots: [
+    {
+      id: "SLOT-001",
+      startsAt: "2026-06-10T09:00:00.000Z",
+      durationMinutes: 20,
+      staffRole: "front_desk",
+      available: true
     },
-    notes: "Synthetic higher-priority booking scenario. Not clinical guidance."
-  },
-  {
-    id: "SYN-003",
-    patient: {
-      displayName: "Marcus Chen",
-      ageYears: 51,
-      pronouns: "he/him",
-      region: "Synthetic South"
+    {
+      id: "SLOT-002",
+      startsAt: "2026-06-10T10:30:00.000Z",
+      durationMinutes: 15,
+      staffRole: "care_coordinator",
+      available: true
     },
-    concerns: ["chest tightness", "breathlessness"],
-    symptoms: ["pressure sensation", "shortness of breath", "sweating"],
-    durationDays: 0,
-    severity: 9,
-    riskFactors: ["synthetic high blood pressure history"],
-    redFlags: ["chest pain", "shortness of breath"],
-    medications: ["synthetic amlodipine"],
-    allergies: ["none recorded"],
-    contactPreference: "in-person",
-    vitals: {
-      heartRateBpm: 128,
-      systolicBp: 142,
-      oxygenSaturationPct: 93
+    {
+      id: "SLOT-003",
+      startsAt: "2026-06-10T14:00:00.000Z",
+      durationMinutes: 30,
+      staffRole: "practice_manager",
+      available: false
+    }
+  ],
+  tasks: [
+    {
+      id: "TASK-001",
+      clinicId: "CLINIC-SYN-001",
+      title: "Move routine appointment after staff rota change",
+      type: "appointment_reschedule",
+      status: "queued",
+      requestedBy: "synthetic scheduling queue",
+      requiredRole: "front_desk",
+      dueAt: "2026-06-10T12:00:00.000Z",
+      relatedSlotId: "SLOT-001",
+      needsApproval: false,
+      adminNotes: ["Synthetic appointment admin task", "Operations-only content"]
     },
-    notes: "Synthetic safety-flag case intended to demonstrate emergency disclaimer behavior."
-  },
-  {
-    id: "SYN-004",
-    patient: {
-      displayName: "Sam Taylor",
-      ageYears: 42,
-      pronouns: "he/they",
-      region: "Synthetic West"
+    {
+      id: "TASK-002",
+      clinicId: "CLINIC-SYN-001",
+      title: "Check referral admin packet for missing attachment",
+      type: "referral_admin_follow_up",
+      status: "queued",
+      requestedBy: "synthetic referral inbox",
+      requiredRole: "care_coordinator",
+      dueAt: "2026-06-10T16:00:00.000Z",
+      needsApproval: true,
+      adminNotes: ["Verify form completeness only", "Do not review care appropriateness"]
     },
-    concerns: ["repeat prescription request", "travel letter request"],
-    symptoms: ["stable long-term condition", "no new symptoms"],
-    durationDays: 30,
-    severity: 2,
-    riskFactors: [],
-    redFlags: [],
-    medications: ["synthetic levothyroxine"],
-    allergies: ["none recorded"],
-    contactPreference: "video",
-    notes: "Synthetic administrative workflow case."
-  }
-];
+    {
+      id: "TASK-003",
+      clinicId: "CLINIC-SYN-001",
+      title: "Approve template update for admin callback message",
+      type: "message_callback",
+      status: "waiting_approval",
+      requestedBy: "synthetic communications queue",
+      requiredRole: "practice_manager",
+      dueAt: "2026-06-11T09:00:00.000Z",
+      needsApproval: true,
+      assignedTo: "STAFF-003",
+      adminNotes: ["Message template is administrative only", "No advice content permitted"]
+    },
+    {
+      id: "TASK-004",
+      clinicId: "CLINIC-SYN-001",
+      title: "Confirm insurance admin eligibility field formatting",
+      type: "insurance_admin_check",
+      status: "queued",
+      requestedBy: "synthetic billing queue",
+      requiredRole: "billing_admin",
+      dueAt: "2026-06-11T13:00:00.000Z",
+      needsApproval: false,
+      adminNotes: ["Synthetic payer admin check", "No coverage guarantee"]
+    }
+  ]
+};

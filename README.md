@@ -1,22 +1,35 @@
 # Care GP Public
 
-Clean-room, non-regulated TypeScript demo of a public GP intake routing workflow using synthetic seed data.
+Clean-room, non-clinical TypeScript demo of synthetic primary healthcare operations/admin workflows.
+
+This implementation follows the public YC source at `https://www.ycombinator.com/companies/care-gp`, which describes Care GP as "AI agents to run primary healthcare operations." The project stays strictly inside healthcare operations/admin scope.
 
 ## What This Is
 
-This repository implements a small command-line tool that demonstrates how a generic GP intake experience could collect structured synthetic intake details, validate them, and produce non-clinical visit-preparation routing labels.
+This repository implements a small command-line tool that demonstrates generic admin operations for a synthetic clinic workspace:
 
-The implementation is intentionally narrow: it is a public clean-room reimplementation of a concept, not a production healthcare system.
+- Synthetic staff task assignment
+- Synthetic scheduling/admin work items
+- Human approval queues
+- Immutable-style audit log events
+- Mocked communications and EHR-like admin connector dry-run payloads
+- Seed data validation that rejects clinical/patient-care wording inside admin task text
+
+## Hard Scope Limits
+
+This is not an AI doctor, clinical product, intake triage product, diagnosis/treatment tool, or clinical decision support system.
+
+Do not use this project for diagnosis, treatment, triage, PHI, medical advice, clinical decision support, medical-device behavior, real patient data, or real EHR/clinic integrations.
 
 ## Clean-Room Notice
 
-This project is independently implemented. It does not copy proprietary source code, private workflows, brand assets, patient data, model prompts, or non-public implementation details from any company or product.
+This project is independently implemented from public information only. It does not copy proprietary source code, private workflows, private prompts, brand assets, patient data, model outputs, or non-public implementation details from any company or product.
 
-## Non-Regulated Disclaimer
+## Non-Clinical Disclaimer
 
-This software is for demonstration and engineering validation only. It uses synthetic data and is not medical advice, a diagnosis, a treatment plan, clinical decision support, a medical device, an emergency service, or a substitute for a qualified clinician.
+This software is for demonstration and engineering validation only. It uses synthetic clinic, staff, scheduling, approval, audit, and connector data. It is admin-only and non-regulated.
 
-Do not use this project with real patient data, protected health information, operational clinical workflows, triage decisions, emergencies, or regulated healthcare use cases. If a real person may be in danger, contact local emergency services or a qualified clinician immediately.
+All connector behavior is mocked and dry-run only. No real messages are sent, no real EHRs are contacted, and no real clinic systems are updated.
 
 ## Requirements
 
@@ -40,7 +53,8 @@ Useful CLI commands:
 
 ```bash
 node dist/cli.js list
-node dist/cli.js demo SYN-003
+node dist/cli.js demo
+node dist/cli.js connectors
 npm run validate
 ```
 
@@ -52,20 +66,22 @@ npm test
 
 ## Synthetic Seed Data
 
-The bundled seed cases live in `src/seed.ts`. They are fictional and deterministic:
+The bundled seed workspace lives in `src/seed.ts` and is fictional:
 
-- `SYN-001`: routine symptom-preparation scenario
-- `SYN-002`: higher-priority synthetic GP contact scenario
-- `SYN-003`: safety-flag scenario that demonstrates emergency disclaimer behavior
-- `SYN-004`: administrative request scenario
+- Synthetic clinic metadata
+- Synthetic staff members and roles
+- Synthetic appointment/admin slots
+- Synthetic admin tasks for rescheduling, referral packet follow-up, message approval, and insurance admin checks
+
+There is no PHI and no real person, practice, EHR, payer, or clinic integration.
 
 ## Project Structure
 
-- `PLAN.md`: implementation plan and clean-room boundaries
+- `PLAN.md`: admin-only clean-room implementation plan and boundaries
 - `src/cli.ts`: command-line interface
-- `src/seed.ts`: synthetic intake fixtures
-- `src/validation.ts`: structured intake validation
-- `src/router.ts`: deterministic non-clinical routing labels
+- `src/seed.ts`: synthetic operations fixtures
+- `src/validation.ts`: operations seed validation and clinical-term rejection for task text
+- `src/operations.ts`: deterministic admin workflow engine
 - `src/*.test.ts`: Node test runner coverage
 
 ## Validation Commands

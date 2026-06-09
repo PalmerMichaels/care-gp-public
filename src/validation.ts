@@ -1,4 +1,4 @@
-import { CONTACT_PREFERENCES, type SyntheticIntake } from "./types.js";
+import { CONNECTOR_TYPES, STAFF_ROLES, TASK_STATUSES, TASK_TYPES, type SyntheticClinicData } from "./types.js";
 
 export interface ValidationIssue {
   path: string;
@@ -18,145 +18,180 @@ function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function requireText(record: Record<string, unknown>, key: string, issues: ValidationIssue[], path = key): void {
+function isIsoDate(value: unknown): value is string {
+  return hasText(value) && !Number.isNaN(Date.parse(value));
+}
+
+function requireText(record: Record<string, unknown>, key: string, issues: ValidationIssue[], path: string): void {
   if (!hasText(record[key])) {
     issues.push({ path, message: "must be a non-empty string" });
   }
 }
 
-function requireStringArray(
-  record: Record<string, unknown>,
-  key: string,
-  issues: ValidationIssue[],
-  minItems = 0
-): void {
+function requireStringArray(record: Record<string, unknown>, key: string, issues: ValidationIssue[], path: string): void {
   const value = record[key];
-  if (!Array.isArray(value) || value.length < minItems || !value.every(hasText)) {
-    issues.push({
-      path: key,
-      message: `must be an array of non-empty strings with at least ${minItems} item(s)`
-    });
+  if (!Array.isArray(value) || !value.every(hasText)) {
+    issues.push({ path, message: "must be an array of non-empty strings" });
   }
 }
 
-function requireIntegerRange(
-  record: Record<string, unknown>,
-  key: string,
-  min: number,
-  max: number,
-  issues: ValidationIssue[],
-  path = key
-): void {
+function requirePositiveInteger(record: Record<string, unknown>, key: string, issues: ValidationIssue[], path: string): void {
   const value = record[key];
-  if (!Number.isInteger(value) || (value as number) < min || (value as number) > max) {
-    issues.push({ path, message: `must be an integer from ${min} to ${max}` });
+  if (!Number.isInteger(value) || (value as number) <= 0) {
+    issues.push({ path, message: "must be a positive integer" });
   }
 }
 
-function requireNumberRange(
+function requireEnum<T extends readonly string[]>(
   record: Record<string, unknown>,
   key: string,
-  min: number,
-  max: number,
+  allowed: T,
   issues: ValidationIssue[],
-  path = key
+  path: string
 ): void {
-  const value = record[key];
-  if (typeof value !== "number" || Number.isNaN(value) || value < min || value > max) {
-    issues.push({ path, message: `must be a number from ${min} to ${max}` });
+  if (!allowed.includes(record[key] as never)) {
+    issues.push({ path, message: `must be one of: ${allowed.join(", ")}` });
   }
 }
 
-export function validateIntake(value: unknown): ValidationResult {
+function rejectClinicalTerms(value: string, issues: ValidationIssue[], path: string): void {
+  const clinicalTerms = [
+    "diagnosis",
+    "diagnose",
+    "treatment",
+    "treat",
+    "triage",
+    "symptom",
+    "acuity",
+    "medical advice",
+    "clinical decision",
+    "patient"
+  ];
+  const lowerValue = value.toLowerCase();
+  const matched = clinicalTerms.find((term) => lowerValue.includes(term));
+  if (matched) {
+    issues.push({ path, message: `must not contain clinical or patient-care term: ${matched}` });
+  }
+}
+
+export function validateClinicData(value: unknown): ValidationResult {
   const issues: ValidationIssue[] = [];
 
   if (!isRecord(value)) {
     return { valid: false, issues: [{ path: "$", message: "must be an object" }] };
   }
 
-  requireText(value, "id", issues);
-  requireStringArray(value, "concerns", issues, 1);
-  requireStringArray(value, "symptoms", issues, 1);
-  requireIntegerRange(value, "durationDays", 0, 3650, issues);
-  requireIntegerRange(value, "severity", 1, 10, issues);
-  requireStringArray(value, "riskFactors", issues);
-  requireStringArray(value, "redFlags", issues);
-  requireStringArray(value, "medications", issues);
-  requireStringArray(value, "allergies", issues);
+  requireText(value, "clinicId", issues, "clinicId");
+  requireText(value, "clinicName", issues, "clinicName");
 
-  if (!CONTACT_PREFERENCES.includes(value.contactPreference as never)) {
-    issues.push({ path: "contactPreference", message: "must be phone, video, or in-person" });
-  }
-
-  if (!isRecord(value.patient)) {
-    issues.push({ path: "patient", message: "must be an object" });
+  const staffIds = new Set<string>();
+  if (!Array.isArray(value.staff) || value.staff.length === 0) {
+    issues.push({ path: "staff", message: "must contain at least one synthetic staff member" });
   } else {
-    requireText(value.patient, "displayName", issues, "patient.displayName");
-    requireIntegerRange(value.patient, "ageYears", 0, 120, issues, "patient.ageYears");
-    if (value.patient.pronouns !== undefined && !hasText(value.patient.pronouns)) {
-      issues.push({ path: "patient.pronouns", message: "must be a non-empty string when provided" });
-    }
-    if (value.patient.region !== undefined && !hasText(value.patient.region)) {
-      issues.push({ path: "patient.region", message: "must be a non-empty string when provided" });
-    }
+    value.staff.forEach((member, index) => {
+      const path = `staff[${index}]`;
+      if (!isRecord(member)) {
+        issues.push({ path, message: "must be an object" });
+        return;
+      }
+      requireText(member, "id", issues, `${path}.id`);
+      requireText(member, "displayName", issues, `${path}.displayName`);
+      requireEnum(member, "role", STAFF_ROLES, issues, `${path}.role`);
+      requirePositiveInteger(member, "maxOpenTasks", issues, `${path}.maxOpenTasks`);
+      if (hasText(member.id)) {
+        if (staffIds.has(member.id)) {
+          issues.push({ path: `${path}.id`, message: "must be unique" });
+        }
+        staffIds.add(member.id);
+      }
+    });
   }
 
-  if (value.vitals !== undefined) {
-    if (!isRecord(value.vitals)) {
-      issues.push({ path: "vitals", message: "must be an object when provided" });
-    } else {
-      const vitals = value.vitals;
-      if (vitals.temperatureC !== undefined) {
-        requireNumberRange(vitals, "temperatureC", 30, 45, issues, "vitals.temperatureC");
+  const slotIds = new Set<string>();
+  if (!Array.isArray(value.slots)) {
+    issues.push({ path: "slots", message: "must be an array" });
+  } else {
+    value.slots.forEach((slot, index) => {
+      const path = `slots[${index}]`;
+      if (!isRecord(slot)) {
+        issues.push({ path, message: "must be an object" });
+        return;
       }
-      if (vitals.heartRateBpm !== undefined) {
-        requireNumberRange(vitals, "heartRateBpm", 20, 240, issues, "vitals.heartRateBpm");
+      requireText(slot, "id", issues, `${path}.id`);
+      if (!isIsoDate(slot.startsAt)) {
+        issues.push({ path: `${path}.startsAt`, message: "must be an ISO date string" });
       }
-      if (vitals.systolicBp !== undefined) {
-        requireNumberRange(vitals, "systolicBp", 50, 260, issues, "vitals.systolicBp");
+      requirePositiveInteger(slot, "durationMinutes", issues, `${path}.durationMinutes`);
+      requireEnum(slot, "staffRole", STAFF_ROLES, issues, `${path}.staffRole`);
+      if (typeof slot.available !== "boolean") {
+        issues.push({ path: `${path}.available`, message: "must be a boolean" });
       }
-      if (vitals.oxygenSaturationPct !== undefined) {
-        requireNumberRange(vitals, "oxygenSaturationPct", 50, 100, issues, "vitals.oxygenSaturationPct");
+      if (hasText(slot.id)) {
+        if (slotIds.has(slot.id)) {
+          issues.push({ path: `${path}.id`, message: "must be unique" });
+        }
+        slotIds.add(slot.id);
       }
-    }
+    });
   }
 
-  if (value.notes !== undefined && !hasText(value.notes)) {
-    issues.push({ path: "notes", message: "must be a non-empty string when provided" });
+  const taskIds = new Set<string>();
+  if (!Array.isArray(value.tasks) || value.tasks.length === 0) {
+    issues.push({ path: "tasks", message: "must contain at least one synthetic admin task" });
+  } else {
+    value.tasks.forEach((task, index) => {
+      const path = `tasks[${index}]`;
+      if (!isRecord(task)) {
+        issues.push({ path, message: "must be an object" });
+        return;
+      }
+      requireText(task, "id", issues, `${path}.id`);
+      requireText(task, "clinicId", issues, `${path}.clinicId`);
+      requireText(task, "title", issues, `${path}.title`);
+      requireEnum(task, "type", TASK_TYPES, issues, `${path}.type`);
+      requireEnum(task, "status", TASK_STATUSES, issues, `${path}.status`);
+      requireText(task, "requestedBy", issues, `${path}.requestedBy`);
+      requireEnum(task, "requiredRole", STAFF_ROLES, issues, `${path}.requiredRole`);
+      if (!isIsoDate(task.dueAt)) {
+        issues.push({ path: `${path}.dueAt`, message: "must be an ISO date string" });
+      }
+      if (typeof task.needsApproval !== "boolean") {
+        issues.push({ path: `${path}.needsApproval`, message: "must be a boolean" });
+      }
+      requireStringArray(task, "adminNotes", issues, `${path}.adminNotes`);
+      if (hasText(task.title)) {
+        rejectClinicalTerms(task.title, issues, `${path}.title`);
+      }
+      if (Array.isArray(task.adminNotes)) {
+        task.adminNotes.forEach((note, noteIndex) => {
+          if (hasText(note)) {
+            rejectClinicalTerms(note, issues, `${path}.adminNotes[${noteIndex}]`);
+          }
+        });
+      }
+      if (task.assignedTo !== undefined && (!hasText(task.assignedTo) || !staffIds.has(task.assignedTo))) {
+        issues.push({ path: `${path}.assignedTo`, message: "must reference a synthetic staff member" });
+      }
+      if (task.relatedSlotId !== undefined && (!hasText(task.relatedSlotId) || !slotIds.has(task.relatedSlotId))) {
+        issues.push({ path: `${path}.relatedSlotId`, message: "must reference a synthetic slot" });
+      }
+      if (hasText(task.id)) {
+        if (taskIds.has(task.id)) {
+          issues.push({ path: `${path}.id`, message: "must be unique" });
+        }
+        taskIds.add(task.id);
+      }
+    });
   }
 
+  void CONNECTOR_TYPES;
   return { valid: issues.length === 0, issues };
 }
 
-export function validateAllIntakes(values: unknown): ValidationResult {
-  const issues: ValidationIssue[] = [];
-
-  if (!Array.isArray(values)) {
-    return { valid: false, issues: [{ path: "$", message: "must be an array" }] };
-  }
-
-  const seenIds = new Set<string>();
-  values.forEach((value, index) => {
-    const result = validateIntake(value);
-    for (const issue of result.issues) {
-      issues.push({ path: `[${index}].${issue.path}`, message: issue.message });
-    }
-
-    if (isRecord(value) && hasText(value.id)) {
-      if (seenIds.has(value.id)) {
-        issues.push({ path: `[${index}].id`, message: "must be unique" });
-      }
-      seenIds.add(value.id);
-    }
-  });
-
-  return { valid: issues.length === 0, issues };
-}
-
-export function assertValidIntake(value: unknown): asserts value is SyntheticIntake {
-  const result = validateIntake(value);
+export function assertValidClinicData(value: unknown): asserts value is SyntheticClinicData {
+  const result = validateClinicData(value);
   if (!result.valid) {
     const detail = result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ");
-    throw new Error(`Invalid synthetic intake: ${detail}`);
+    throw new Error(`Invalid synthetic clinic data: ${detail}`);
   }
 }

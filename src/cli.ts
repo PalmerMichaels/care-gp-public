@@ -1,60 +1,66 @@
 #!/usr/bin/env node
 import { fileURLToPath } from "node:url";
 import { fullDisclaimer } from "./disclaimer.js";
-import { routeIntake } from "./router.js";
-import { syntheticIntakes } from "./seed.js";
-import type { RouteResult, SyntheticIntake } from "./types.js";
-import { validateAllIntakes } from "./validation.js";
+import { runOperationsWorkflow } from "./operations.js";
+import { syntheticClinic } from "./seed.js";
+import type { AdminConnectorPayload, AuditEvent, SyntheticAdminTask } from "./types.js";
+import { validateClinicData } from "./validation.js";
 
 interface CliIO {
   write: (message: string) => void;
   error: (message: string) => void;
 }
 
-function formatListItem(intake: SyntheticIntake): string {
-  return `${intake.id} | ${intake.patient.displayName} | ${intake.concerns.join(", ")}`;
+function formatTask(task: SyntheticAdminTask): string {
+  const assignee = task.assignedTo ? ` assigned=${task.assignedTo}` : " unassigned";
+  return `${task.id} | ${task.status} | ${task.type} | role=${task.requiredRole}${assignee} | ${task.title}`;
+}
+
+function formatAudit(event: AuditEvent): string {
+  return `${event.id} | ${event.action} | ${event.taskId} | ${event.detail}`;
+}
+
+function formatPayload(payload: AdminConnectorPayload): string {
+  return `${payload.connector} | ${payload.operation} | dryRun=${payload.dryRun} | ref=${payload.externalReference}`;
 }
 
 export function renderList(): string {
-  return ["Synthetic seed intakes:", ...syntheticIntakes.map(formatListItem)].join("\n");
-}
-
-function renderRoute(route: RouteResult): string {
   return [
-    `Recommended non-clinical route: ${route.label}`,
-    `Acuity key: ${route.acuity}`,
-    "Rationale:",
-    ...route.rationale.map((item) => `- ${item}`),
-    "Suggested preparation:",
-    ...route.suggestedPreparation.map((item) => `- ${item}`),
-    "Disclaimer:",
-    route.disclaimer
+    `Synthetic operations workspace: ${syntheticClinic.clinicName}`,
+    "Admin tasks:",
+    ...syntheticClinic.tasks.map(formatTask)
   ].join("\n");
 }
 
-function renderIntake(intake: SyntheticIntake): string {
+export function renderDemo(): string {
+  const result = runOperationsWorkflow(syntheticClinic);
   return [
-    `Case: ${intake.id}`,
-    `Synthetic patient: ${intake.patient.displayName}, age ${intake.patient.ageYears}`,
-    `Concerns: ${intake.concerns.join(", ")}`,
-    `Symptoms/request details: ${intake.symptoms.join(", ")}`,
-    `Duration: ${intake.durationDays} day(s)`,
-    `Self-reported severity: ${intake.severity}/10`,
-    `Preferred contact: ${intake.contactPreference}`
+    fullDisclaimer(),
+    "",
+    `Operations run for ${result.clinicId} at ${result.generatedAt}`,
+    "",
+    "Task updates:",
+    ...result.taskUpdates.map(formatTask),
+    "",
+    "Approvals queued for human admin review:",
+    ...(result.approvals.length > 0 ? result.approvals.map(formatTask) : ["None"]),
+    "",
+    "Audit log:",
+    ...result.auditLog.map(formatAudit),
+    "",
+    "Mock connector dry-run payloads:",
+    ...result.connectorPayloads.map(formatPayload)
   ].join("\n");
 }
 
-export function renderDemo(caseId?: string): string {
-  const intake = caseId
-    ? syntheticIntakes.find((candidate) => candidate.id === caseId)
-    : syntheticIntakes[0];
-
-  if (!intake) {
-    throw new Error(`Unknown synthetic intake id: ${caseId ?? "none"}`);
-  }
-
-  const route = routeIntake(intake);
-  return [fullDisclaimer(), "", renderIntake(intake), "", renderRoute(route)].join("\n");
+export function renderConnectors(): string {
+  const result = runOperationsWorkflow(syntheticClinic);
+  return [
+    fullDisclaimer(),
+    "",
+    "Mock admin connector dry-run payloads:",
+    JSON.stringify(result.connectorPayloads, null, 2)
+  ].join("\n");
 }
 
 export function renderHelp(): string {
@@ -62,20 +68,22 @@ export function renderHelp(): string {
     "care-gp-public",
     "",
     "Commands:",
-    "  list                 List synthetic seed intakes",
-    "  demo [SYN-ID]        Render a non-clinical route for a synthetic case",
-    "  validate             Validate all synthetic seed intakes",
-    "  help                 Show this help",
+    "  list         List synthetic admin operations tasks",
+    "  demo         Run the synthetic admin operations workflow",
+    "  connectors   Print mocked admin connector dry-run payloads",
+    "  validate     Validate all synthetic operations seed data",
+    "  help         Show this help",
     "",
     "Examples:",
     "  node dist/cli.js list",
-    "  node dist/cli.js demo SYN-003",
+    "  node dist/cli.js demo",
+    "  node dist/cli.js connectors",
     "  npm run validate"
   ].join("\n");
 }
 
 export function runCli(args: string[], io: CliIO = { write: console.log, error: console.error }): number {
-  const [command = "help", caseId] = args;
+  const [command = "help"] = args;
 
   if (command === "list") {
     io.write(renderList());
@@ -83,19 +91,19 @@ export function runCli(args: string[], io: CliIO = { write: console.log, error: 
   }
 
   if (command === "demo") {
-    try {
-      io.write(renderDemo(caseId));
-      return 0;
-    } catch (error) {
-      io.error(error instanceof Error ? error.message : String(error));
-      return 1;
-    }
+    io.write(renderDemo());
+    return 0;
+  }
+
+  if (command === "connectors") {
+    io.write(renderConnectors());
+    return 0;
   }
 
   if (command === "validate") {
-    const result = validateAllIntakes(syntheticIntakes);
+    const result = validateClinicData(syntheticClinic);
     if (result.valid) {
-      io.write(`Validated ${syntheticIntakes.length} synthetic intakes.`);
+      io.write(`Validated ${syntheticClinic.tasks.length} synthetic admin tasks.`);
       return 0;
     }
     io.error(result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));
