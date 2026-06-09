@@ -1,4 +1,4 @@
-export { ADMIN_ONLY_NOTICE, CLEAN_ROOM_NOTICE, NON_CLINICAL_NOTICE, fullDisclaimer } from "./disclaimer.js";
+export { ADMIN_BOUNDARY_NOTICE, ADMIN_ONLY_NOTICE, CLEAN_ROOM_NOTICE, fullDisclaimer } from "./disclaimer.js";
 export { runOperationsWorkflow } from "./operations.js";
 export { syntheticClinic } from "./seed.js";
 export type {

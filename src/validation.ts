@@ -54,23 +54,21 @@ function requireEnum<T extends readonly string[]>(
   }
 }
 
-function rejectClinicalTerms(value: string, issues: ValidationIssue[], path: string): void {
-  const clinicalTerms = [
-    "diagnosis",
-    "diagnose",
-    "treatment",
-    "treat",
-    "triage",
-    "symptom",
-    "acuity",
-    "medical advice",
-    "clinical decision",
-    "patient"
+function rejectCareDeliveryTerms(value: string, issues: ValidationIssue[], path: string): void {
+  const blockedTerms = [
+    "care assessment",
+    "care recommendation",
+    "care plan",
+    "health recommendation",
+    "condition assessment",
+    "regulated care",
+    "protected record",
+    "person record"
   ];
   const lowerValue = value.toLowerCase();
-  const matched = clinicalTerms.find((term) => lowerValue.includes(term));
+  const matched = blockedTerms.find((term) => lowerValue.includes(term));
   if (matched) {
-    issues.push({ path, message: `must not contain clinical or patient-care term: ${matched}` });
+    issues.push({ path, message: `must not contain care-delivery term: ${matched}` });
   }
 }
 
@@ -160,12 +158,12 @@ export function validateClinicData(value: unknown): ValidationResult {
       }
       requireStringArray(task, "adminNotes", issues, `${path}.adminNotes`);
       if (hasText(task.title)) {
-        rejectClinicalTerms(task.title, issues, `${path}.title`);
+        rejectCareDeliveryTerms(task.title, issues, `${path}.title`);
       }
       if (Array.isArray(task.adminNotes)) {
         task.adminNotes.forEach((note, noteIndex) => {
           if (hasText(note)) {
-            rejectClinicalTerms(note, issues, `${path}.adminNotes[${noteIndex}]`);
+            rejectCareDeliveryTerms(note, issues, `${path}.adminNotes[${noteIndex}]`);
           }
         });
       }

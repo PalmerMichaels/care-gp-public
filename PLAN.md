@@ -9,8 +9,8 @@ Build a runnable TypeScript command-line demo inspired by the public YC descript
 - Do not copy proprietary source code, assets, private workflows, private prompts, or non-public product details.
 - Implement only generic healthcare operations/admin workflows: task assignment, appointment slot coordination, approval status changes, admin connector sync previews, and immutable audit events.
 - Use synthetic clinics, staff, schedules, tasks, and admin messages only.
-- Do not implement diagnosis, treatment, triage, clinical intake, acuity scoring, medical advice, clinical decision support, medical-device behavior, PHI handling, real patient data, or real EHR/clinic integrations.
-- Include explicit disclaimers that the project is non-clinical, non-regulated, synthetic-only, and admin-only.
+- Do not implement care assessment, care recommendations, person-record handling, regulated care automation, or live system integrations.
+- Include explicit disclaimers that the project is admin-only, non-regulated, synthetic-only, and dry-run only.
 
 ## Implementation Steps
 

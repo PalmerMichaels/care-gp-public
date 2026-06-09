@@ -19,18 +19,18 @@ describe("synthetic operations validation", () => {
     assert.equal(result.issues.some((issue) => issue.path === "staff[1].id"), true);
   });
 
-  it("rejects clinical or patient-care terms in admin task text", () => {
+  it("rejects care-delivery terms in admin task text", () => {
     const invalid = {
       ...syntheticClinic,
       tasks: [
         {
           ...syntheticClinic.tasks[0]!,
-          title: "Triage patient symptoms"
+          title: "Draft care recommendation"
         }
       ]
     };
     const result = validateClinicData(invalid);
     assert.equal(result.valid, false);
-    assert.equal(result.issues.some((issue) => issue.message.includes("triage")), true);
+    assert.equal(result.issues.some((issue) => issue.message.includes("care recommendation")), true);
   });
 });

@@ -7,7 +7,7 @@ describe("CLI rendering", () => {
     const output = renderDemo();
     assert.match(output, /Clean-room notice/);
     assert.match(output, /Admin-only notice/);
-    assert.match(output, /Non-clinical notice/);
+    assert.match(output, /Admin boundary notice/);
     assert.match(output, /Operations run/);
   });
 
